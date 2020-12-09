@@ -486,6 +486,14 @@ if (stripos($contentType, "text/html") !== false) {
   foreach ($xpath->query("//img[@srcset]") as $element) {
     $element->setAttribute("srcset", proxifySrcset($element->getAttribute("srcset"), $url));
   }
+  //Proxify "data" attributes in <object> tags.
+  foreach ($xpath->query("//object[@data]") as $element) {
+      $attrContent = $element->getAttribute("data");
+      $attrContent = rel2abs($attrContent, $url);
+      $attrContent = PROXY_PREFIX . $attrContent;
+      $element->setAttribute("data", $attrContent);
+    }
+
   //Proxify any of these attributes appearing in any tag.
   $proxifyAttributes = ["href", "src"];
   foreach($proxifyAttributes as $attrName) {
