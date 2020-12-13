@@ -1,3 +1,12 @@
+# About this fork (TinyProxy)
+This fork is maintained and built primarily as the backend to a simple proxy app I'm creating called [TinyProxy](https://play.google.com/store/apps/details?id=appinventor.ai_DaProgramerForBatch.BasicWebProxy)
+It's purpose isn't really to provide a highly secure or private way of browsing the internet, but really to just be a simple solution to get onto a blocked website. With that being said, if I see a potential privacy or security improvement, I will commit it.
+
+## Changes from MiniProxy
+* `<object>` tags are now proxified
+* Cookie support in progress (please don't use yet)
+* `Referer` header is spoofed. [Originally from here](https://github.com/nkorth/miniProxy)
+
 # :rotating_light::warning: Warning: Deprecated/no longer maintained! :warning::rotating_light:
 
 **As of April 26th, 2020, miniProxy is no longer maintained, and no further changes will be made to it (including security-related changes).**
