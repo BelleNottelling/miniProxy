@@ -6,6 +6,7 @@ It's purpose isn't really to provide a highly secure or private way of browsing 
 * `<object>` tags are now proxified
 * Cookie support in progress (please don't use yet)
 * `Referer` header is spoofed. [Originally from here](https://github.com/nkorth/miniProxy)
+* Only replace origin header if `$forceCORS` is set to true [Source](https://github.com/nkorth/miniProxy/commit/38b1a992d67d7e744cb13cb13f1a89a1034966a4)
 
 # :rotating_light::warning: Warning: Deprecated/no longer maintained! :warning::rotating_light:
 
