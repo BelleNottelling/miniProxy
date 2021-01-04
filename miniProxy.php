@@ -221,6 +221,8 @@ function makeRequest($url) {
   }
   if (!$anonymize) {
     $curlRequestHeaders[] = "X-Forwarded-For: " . $_SERVER["REMOTE_ADDR"];
+  } else {
+	$curlRequestHeaders[] = "DNT: 1"; 
   }
   //If an `origin` header is present in the request, replace it with the host of the requested url.
   //This is somewhat insecure, so we'll only do it if $forceCORS is true.
