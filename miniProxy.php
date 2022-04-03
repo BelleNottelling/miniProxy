@@ -474,7 +474,7 @@ if (stripos($contentType, "text/html") !== false) {
       }
     }
   }
-  //Profixy <style> tags.
+  //Proxify <style> tags.
   foreach($xpath->query("//style") as $style) {
     $style->nodeValue = proxifyCSS($style->nodeValue, $url);
   }
@@ -485,6 +485,12 @@ if (stripos($contentType, "text/html") !== false) {
   //Proxify "srcset" attributes in <img> tags.
   foreach ($xpath->query("//img[@srcset]") as $element) {
     $element->setAttribute("srcset", proxifySrcset($element->getAttribute("srcset"), $url));
+  }
+  foreach ($xpath->query("//script[@integrity]") as $element) {
+    $element->removeAttribute("integrity");
+  }
+  foreach ($xpath->query("//link[@integrity]") as $element) {
+    $element->removeAttribute("integrity");
   }
   //Proxify any of these attributes appearing in any tag.
   $proxifyAttributes = ["href", "src"];
