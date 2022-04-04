@@ -208,7 +208,7 @@ function makeRequest($url) {
   //If an `origin` header is present in the request, rewrite it to point to the correct origin.
   if (in_array("origin", $removedHeaders)) {
     $urlParts = parse_url($url);
-    $port = $urlParts["port"];
+    $port = isset($urlParts["port"]) ? $urlParts["port"] : null;  
     $curlRequestHeaders[] = "Origin: " . $urlParts["scheme"] . "://" . $urlParts["host"] . (empty($port) ? "" : ":" . $port);
   };
   curl_setopt($ch, CURLOPT_HTTPHEADER, $curlRequestHeaders);
@@ -506,16 +506,17 @@ if (stripos($contentType, "text/html") !== false) {
   }
 
   //Attempt to force AJAX requests to be made through the proxy by
-  //wrapping window.XMLHttpRequest.prototype.open in order to make
+  //wrapping window.XMLHttpRequest.prototype.open/window.fetch in order to make
   //all request URLs absolute and point back to the proxy.
   //The rel2abs() JavaScript function serves the same purpose as the server-side one in this file,
   //but is used in the browser to ensure all AJAX request URLs are absolute and not relative.
   //Uses code from these sources:
   //http://stackoverflow.com/questions/7775767/javascript-overriding-xmlhttprequest-open
   //https://gist.github.com/1088850
-  //TODO: This is obviously only useful for browsers that use XMLHttpRequest but
-  //it's better than nothing.
 
+  //Also handle dynamically injected/changed elements by hooking appendChild(useful for new <script> elements)
+  //and by using MutationObserver(valid for all other types of changes, it cannot handle <script> because <script> will not automatically reload)
+  
   $head = $xpath->query("//head")->item(0);
   $body = $xpath->query("//body")->item(0);
   $prependElem = $head != null ? $head : $body;
@@ -525,6 +526,8 @@ if (stripos($contentType, "text/html") !== false) {
   //Protects against cases where the server sends a Content-Type of "text/html" when
   //what's coming back is most likely not actually HTML.
   //TODO: Do this check before attempting to do any sort of DOM parsing?
+  //TODO: window.location and the scripts which uses window.location to redirect (for example Youtube)
+  //TODO: srcSet?
   if ($prependElem != null) {
 
     $scriptElem = $doc->createElement("script",
@@ -568,23 +571,45 @@ if (stripos($contentType, "text/html") !== false) {
 
           return !href || !base ? null : (href.protocol || base.protocol) +
           (href.protocol || href.authority ? href.authority : base.authority) +
-          removeDotSegments(href.protocol || href.authority || href.pathname.charAt(0) === "/" ? href.pathname : (href.pathname ? ((base.authority && !base.pathname ? "/" : "") + base.pathname.slice(0, base.pathname.lastIndexOf("/") + 1) + href.pathname) : base.pathname)) +
+          removeDotSegments(href.protocol || href.authority || href.pathname.charAt(0) === "/" ? href.pathname : (href.pathname ? ((base.authority &amp;&amp; !base.pathname ? "/" : "") + base.pathname.slice(0, base.pathname.lastIndexOf("/") + 1) + href.pathname) : base.pathname)) +
           (href.protocol || href.authority || href.pathname ? href.search : (href.search || base.search)) +
           href.hash;
 
+        }
+
+        function convertURL(url) {
+          url = rel2abs("' . $url . '", url);
+          if (url.indexOf("' . PROXY_PREFIX . '") == -1) {
+            url = "' . PROXY_PREFIX . '" + url;
+          }
+          return url;
+        }
+
+        var original_appendChild = Element.prototype.appendChild;
+        Element.prototype.appendChild = function() {
+          if (arguments[0].attributes) {
+            if (arguments[0].attributes.src &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "data:") {
+              var converted = convertURL(arguments[0].attributes.src.value);
+              if (converted !== arguments[0].attributes.src.value) {
+                arguments[0].attributes.src.value = converted;
+              }
+            }
+            if (arguments[0].attributes.href) {
+              var converted = convertURL(arguments[0].attributes.href.value);
+              if (converted !== arguments[0].attributes.href.value) {
+                arguments[0].attributes.href.value = converted;
+              }
+            }
+          }
+          return original_appendChild.apply(this, [].slice.call(arguments));
         }
 
 
         if (window.XMLHttpRequest) {
           var proxied = window.XMLHttpRequest.prototype.open;
           window.XMLHttpRequest.prototype.open = function() {
-              if (arguments[1] !== null && arguments[1] !== undefined) {
-                var url = arguments[1];
-                url = rel2abs("' . $url . '", url);
-                if (url.indexOf("' . PROXY_PREFIX . '") == -1) {
-                  url = "' . PROXY_PREFIX . '" + url;
-                }
-                arguments[1] = url;
+              if (arguments[1] !== null &amp;&amp; arguments[1] !== undefined) {
+                arguments[1] = convertURL(arguments[1]);
               }
               return proxied.apply(this, [].slice.call(arguments));
           };
@@ -593,17 +618,52 @@ if (stripos($contentType, "text/html") !== false) {
         if (window.fetch) {
           var original_fetch = window.fetch;
           window.fetch = function() {
-            if (arguments[0] !== null && arguments[0] !== undefined) {
-              var url = arguments[0];
-              url = rel2abs("' . $url . '", url);
-              if (url.indexOf("' . PROXY_PREFIX . '") == -1) {
-                url = "' . PROXY_PREFIX . '" + url;
-              }
-              arguments[0] = url;
+            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined) {
+              arguments[0] = convertURL(arguments[0]);
             }
             return original_fetch(...arguments);
           }
         }
+
+        var observer = new MutationObserver((mutations) => {
+          mutations.forEach(mutation => {
+            if (mutation.type === "attributes") {
+              if (mutation.attributeName === "src" &amp;&amp; mutation.target.attributes.src &amp;&amp; mutation.target.attributes.src.value.substr(0, 5) !== "data:") {
+                var converted = convertURL(mutation.target.attributes.src.value);
+                if (converted !== mutation.target.attributes.src.value) {
+                  mutation.target.attributes.src.value = converted;
+                }
+              }
+              else if (mutation.attributeName === "href" &amp;&amp; mutation.target.attributes.href) {
+                var converted = convertURL(mutation.target.attributes.href.value);
+                if (converted !== mutation.target.attributes.href.value) {
+                  mutation.target.attributes.href.value = converted;
+                }
+              }
+            }
+            else if (mutation.type === "childList") {
+              mutation.addedNodes.forEach(node => {
+                if (node.attributes) {
+                  if (node.attributes.src &amp;&amp; node.attributes.src.value.substr(0, 5) !== "data:") {
+                    var converted = convertURL(node.attributes.src.value);
+                    if (converted !== node.attributes.src.value) {
+                      node.attributes.src.value = converted;
+                    }
+                  }
+                  if (node.attributes.href) {
+                    var converted = convertURL(node.attributes.href.value);
+                    if (converted !== node.attributes.href.value) {
+                      node.attributes.href.value = converted;
+                    }
+                  }
+                }
+              });
+            }
+          });
+        });
+
+        observer.observe(document.getElementsByTagName("html")[0], { attributes: true, childList: true, subtree: true });
+
 
       })();'
     );
