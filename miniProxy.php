@@ -312,7 +312,7 @@ function proxifyCSS($css, $baseURL) {
         if (strpos($url, "\"") === 0) {
           $url = trim($url, "\"");
         }
-        if (stripos($url, "data:") === 0) return "url(" . $url . ")"; //The URL isn't an HTTP URL but is actual binary data. Don't proxify it.
+        if (stripos($url, "data:") === 0 || stripos($url, "blob:") === 0) return "url(" . $url . ")"; //The URL isn't an HTTP URL but is actual binary data. Don't proxify it.
         return "url(" . PROXY_PREFIX . rel2abs($url, $baseURL) . ")";
     },
     $normalizedCSS);
@@ -589,7 +589,7 @@ if (stripos($contentType, "text/html") !== false) {
         var original_appendChild = Element.prototype.appendChild;
         Element.prototype.appendChild = function() {
           if (arguments[0].attributes) {
-            if (arguments[0].attributes.src &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "data:") {
+            if (arguments[0].attributes.src &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "data:" &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "blob:") {
               var converted = convertURL(arguments[0].attributes.src.value);
               if (converted !== arguments[0].attributes.src.value) {
                 arguments[0].attributes.src.value = converted;
@@ -611,7 +611,7 @@ if (stripos($contentType, "text/html") !== false) {
         var original_insertBefore = Element.prototype.insertBefore;
         Element.prototype.insertBefore = function() {
           if (arguments[0].attributes) {
-            if (arguments[0].attributes.src &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "data:") {
+            if (arguments[0].attributes.src &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "data:" &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "blob:") {
               var converted = convertURL(arguments[0].attributes.src.value);
               if (converted !== arguments[0].attributes.src.value) {
                 arguments[0].attributes.src.value = converted;
@@ -664,7 +664,7 @@ if (stripos($contentType, "text/html") !== false) {
         var observer = new MutationObserver((mutations) => {
           mutations.forEach(mutation => {
             if (mutation.type === "attributes") {
-              if (mutation.attributeName === "src" &amp;&amp; mutation.target.attributes.src &amp;&amp; mutation.target.attributes.src.value.substr(0, 5) !== "data:") {
+              if (mutation.attributeName === "src" &amp;&amp; mutation.target.attributes.src &amp;&amp; mutation.target.attributes.src.value.substr(0, 5) !== "data:" &amp;&amp; mutation.target.attributes.src.value.substr(0, 5) !== "blob:") {
                 var converted = convertURL(mutation.target.attributes.src.value);
                 if (converted !== mutation.target.attributes.src.value) {
                   mutation.target.attributes.src.value = converted;
@@ -680,7 +680,7 @@ if (stripos($contentType, "text/html") !== false) {
             else if (mutation.type === "childList") {
               mutation.addedNodes.forEach(node => {
                 if (node.attributes) {
-                  if (node.attributes.src &amp;&amp; node.attributes.src.value.substr(0, 5) !== "data:") {
+                  if (node.attributes.src &amp;&amp; node.attributes.src.value.substr(0, 5) !== "data:" &amp;&amp; node.attributes.src.value.substr(0, 5) !== "blob:") {
                     var converted = convertURL(node.attributes.src.value);
                     if (converted !== node.attributes.src.value) {
                       node.attributes.src.value = converted;
