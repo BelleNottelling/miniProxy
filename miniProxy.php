@@ -529,7 +529,6 @@ if (stripos($contentType, "text/html") !== false) {
   //TODO: window.location?
   //TODO: srcSet? style? integrity?
   //TODO: refactor
-  //TODO: The Request Hook may cause problems, need to think of a better way
   if ($prependElem != null) {
 
     $scriptElem = $doc->createElement("script",
@@ -631,17 +630,6 @@ if (stripos($contentType, "text/html") !== false) {
           return original_insertBefore.apply(this, [].slice.call(arguments));
         }
 
-        var original_Request = null;
-        if (Request) {
-          original_Request = Request;
-          Request = function() {
-            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined &amp;&amp; !(arguments[0] instanceof original_Request)) {
-              arguments[0] = convertURL(arguments[0]);
-            }
-            return new original_Request(...arguments);
-          }
-        }
-
         if (window.XMLHttpRequest) {
           var proxied = window.XMLHttpRequest.prototype.open;
           window.XMLHttpRequest.prototype.open = function() {
@@ -652,10 +640,21 @@ if (stripos($contentType, "text/html") !== false) {
           };
         }
 
+        if (Request) {
+          var original_Request = Request;
+          class proxied_Request extends original_Request {
+            constructor() {
+                arguments[0] = convertURL(arguments[0]);
+                super(...arguments);
+            }
+          }
+          Request = proxied_Request;
+        }
+
         if (window.fetch) {
           var original_fetch = window.fetch;
           window.fetch = function() {
-            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined &amp;&amp; (original_Request === null || !(arguments[0] instanceof original_Request))) {
+            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined &amp;&amp; !(arguments[0] instanceof Request)) {
               arguments[0] = convertURL(arguments[0]);
             }
             return original_fetch(...arguments);
