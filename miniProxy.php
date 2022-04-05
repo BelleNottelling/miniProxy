@@ -514,7 +514,7 @@ if (stripos($contentType, "text/html") !== false) {
   //http://stackoverflow.com/questions/7775767/javascript-overriding-xmlhttprequest-open
   //https://gist.github.com/1088850
 
-  //Also handle dynamically injected/changed elements by hooking appendChild(useful for new <script> elements)
+  //Also handle dynamically injected/changed elements by hooking appendChild&insertBefore(useful for new <script> elements)
   //and by using MutationObserver(valid for all other types of changes, it cannot handle <script> because <script> will not automatically reload)
   
   $head = $xpath->query("//head")->item(0);
@@ -526,8 +526,9 @@ if (stripos($contentType, "text/html") !== false) {
   //Protects against cases where the server sends a Content-Type of "text/html" when
   //what's coming back is most likely not actually HTML.
   //TODO: Do this check before attempting to do any sort of DOM parsing?
-  //TODO: window.location and the scripts which uses window.location to redirect (for example Youtube)
-  //TODO: srcSet?
+  //TODO: window.location?
+  //TODO: srcSet? style? integrity?
+  //TODO: refactor
   if ($prependElem != null) {
 
     $scriptElem = $doc->createElement("script",
@@ -600,8 +601,33 @@ if (stripos($contentType, "text/html") !== false) {
                 arguments[0].attributes.href.value = converted;
               }
             }
+            if (arguments[0].attributes.integrity) {
+              arguments[0].attributes.removeNamedItem("integrity");
+            }
           }
           return original_appendChild.apply(this, [].slice.call(arguments));
+        }
+
+        var original_insertBefore = Element.prototype.insertBefore;
+        Element.prototype.insertBefore = function() {
+          if (arguments[0].attributes) {
+            if (arguments[0].attributes.src &amp;&amp; arguments[0].attributes.src.value.substr(0, 5) !== "data:") {
+              var converted = convertURL(arguments[0].attributes.src.value);
+              if (converted !== arguments[0].attributes.src.value) {
+                arguments[0].attributes.src.value = converted;
+              }
+            }
+            if (arguments[0].attributes.href) {
+              var converted = convertURL(arguments[0].attributes.href.value);
+              if (converted !== arguments[0].attributes.href.value) {
+                arguments[0].attributes.href.value = converted;
+              }
+            }
+            if (arguments[0].attributes.integrity) {
+              arguments[0].attributes.removeNamedItem("integrity");
+            }
+          }
+          return original_insertBefore.apply(this, [].slice.call(arguments));
         }
 
 
@@ -655,6 +681,9 @@ if (stripos($contentType, "text/html") !== false) {
                     if (converted !== node.attributes.href.value) {
                       node.attributes.href.value = converted;
                     }
+                  }
+                  if (node.attributes.integrity) {
+                    node.attributes.removeNamedItem("integrity");
                   }
                 }
               });
