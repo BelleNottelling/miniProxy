@@ -630,6 +630,16 @@ if (stripos($contentType, "text/html") !== false) {
           return original_insertBefore.apply(this, [].slice.call(arguments));
         }
 
+        var original_Request = null;
+        if (Request) {
+          original_Request = Request;
+          Request = function() {
+            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined && !(arguments[0] instanceof original_Request)) {
+              arguments[0] = convertURL(arguments[0]);
+            }
+            return new original_Request(...arguments);
+          }
+        }
 
         if (window.XMLHttpRequest) {
           var proxied = window.XMLHttpRequest.prototype.open;
@@ -644,7 +654,7 @@ if (stripos($contentType, "text/html") !== false) {
         if (window.fetch) {
           var original_fetch = window.fetch;
           window.fetch = function() {
-            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined) {
+            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined &amp;&amp; (original_Request === null || !(arguments[0] instanceof original_Request))) {
               arguments[0] = convertURL(arguments[0]);
             }
             return original_fetch(...arguments);
