@@ -529,6 +529,7 @@ if (stripos($contentType, "text/html") !== false) {
   //TODO: window.location?
   //TODO: srcSet? style? integrity?
   //TODO: refactor
+  //TODO: The Request Hook may cause problems, need to think of a better way
   if ($prependElem != null) {
 
     $scriptElem = $doc->createElement("script",
@@ -634,7 +635,7 @@ if (stripos($contentType, "text/html") !== false) {
         if (Request) {
           original_Request = Request;
           Request = function() {
-            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined && !(arguments[0] instanceof original_Request)) {
+            if (arguments[0] !== null &amp;&amp; arguments[0] !== undefined &amp;&amp; !(arguments[0] instanceof original_Request)) {
               arguments[0] = convertURL(arguments[0]);
             }
             return new original_Request(...arguments);
