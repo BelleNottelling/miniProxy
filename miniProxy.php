@@ -498,7 +498,7 @@ if (stripos($contentType, "text/html") !== false) {
     foreach($xpath->query("//*[@" . $attrName . "]") as $element) { //For every element with the given attribute...
       $attrContent = $element->getAttribute($attrName);
       if ($attrName == "href" && preg_match("/^(about|javascript|magnet|mailto):|#/i", $attrContent)) continue;
-      if ($attrName == "src" && preg_match("/^(data):/i", $attrContent)) continue;
+      if ($attrName == "src" && preg_match("/^(data|blob):/i", $attrContent)) continue;
       $attrContent = rel2abs($attrContent, $url);
       $attrContent = PROXY_PREFIX . $attrContent;
       $element->setAttribute($attrName, $attrContent);
@@ -701,7 +701,7 @@ if (stripos($contentType, "text/html") !== false) {
           });
         });
 
-        observer.observe(document.getElementsByTagName("html")[0], { attributes: true, childList: true, subtree: true });
+        observer.observe(document.body.parentNode, { attributes: true, childList: true, subtree: true });
 
 
       })();'
