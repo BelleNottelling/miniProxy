@@ -701,7 +701,7 @@ if (stripos($contentType, "text/html") !== false) {
           });
         });
 
-        observer.observe(document.body.parentNode, { attributes: true, childList: true, subtree: true });
+        observer.observe(document, { attributes: true, childList: true, subtree: true });
 
 
       })();'
@@ -712,7 +712,7 @@ if (stripos($contentType, "text/html") !== false) {
 
   }
 
-  echo "<!-- Proxified page constructed by miniProxy -->\n" . $doc->saveHTML();
+  echo "<!-- Proxified page constructed by miniProxy -->\n" . mb_convert_encoding($doc->saveHTML(),  $detectedEncoding, "HTML-ENTITIES");
 } else if (stripos($contentType, "text/css") !== false) { //This is CSS, so proxify url() references.
   echo proxifyCSS($responseBody, $url);
 } else { //This isn't a web page or CSS, so serve unmodified through the proxy with the correct headers (images, JavaScript, etc.)
