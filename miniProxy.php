@@ -224,11 +224,15 @@ function makeRequest($url) {
       //More info here: http://stackoverflow.com/questions/8899239/http-raw-post-data-not-being-populated-after-upgrade-to-php-5-3
       //If the miniProxyFormAction field appears in the POST data, remove it so the destination server doesn't receive it.
       $postData = [];
-      parse_str(file_get_contents("php://input"), $postData);
+      $postRawData = file_get_contents("php://input");
+      parse_str($postRawData, $postData);
       if (isset($postData["miniProxyFormAction"])) {
         unset($postData["miniProxyFormAction"]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+      } else {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postRawData);
       }
-      curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+      
     break;
     case "PUT":
       curl_setopt($ch, CURLOPT_PUT, true);
@@ -448,6 +452,7 @@ if (stripos($contentType, "text/html") !== false) {
   @$doc->loadHTML($responseBody);
   $xpath = new DOMXPath($doc);
 
+  //TODO: is this necessary for POST? Should we just change the URL for post?
   //Rewrite forms so that their actions point back to the proxy.
   foreach($xpath->query("//form") as $form) {
     $method = $form->getAttribute("method");
@@ -533,6 +538,9 @@ if (stripos($contentType, "text/html") !== false) {
 
     $scriptElem = $doc->createElement("script",
       '(function() {
+
+        window.history.pushState = function(){}
+        window.history.replaceState = function(){}
 
         function parseURI(url) {
           var m = String(url).replace(/^\s+|\s+$/g, "").match(/^([^:\/?#]+:)?(\/\/(?:[^:@]*(?::[^:@]*)?@)?(([^:\/?#]*)(?::(\d*))?))?([^?#]*)(\?[^#]*)?(#[\s\S]*)?/);
