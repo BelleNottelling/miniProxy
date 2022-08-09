@@ -47,6 +47,9 @@ $disallowLocal = true;
 //Setting to false may improve compatibility with some sites, but also exposes more information about end users to proxied sites.
 $anonymize = true;
 
+//Keep false. Unfinished & likely insecure. Only here for testing purposes
+$cookies = false;
+
 //Start/default URL that that will be proxied when miniProxy is first loaded in a browser/accessed directly with no URL to proxy.
 //If empty, miniProxy will show its own landing page.
 $startURL = "";
@@ -69,6 +72,10 @@ foreach($requiredExtensions as $requiredExtension) {
   if (!extension_loaded($requiredExtension)) {
     die("miniProxy requires PHP's \"" . $requiredExtension . "\" extension. Please install/enable it on your server and try again.");
   }
+}
+
+if (!$cookies) {
+    session_start();
 }
 
 //Helper function for use inside $whitelistPatterns/$blacklistPatterns.
@@ -169,7 +176,7 @@ define("PROXY_PREFIX", "http" . (isset($_SERVER["HTTPS"]) ? "s" : "") . "://" . 
 function makeRequest($url) {
 
   global $anonymize;
-
+  global $cookies;
   //Tell cURL to make the request using the brower's user-agent if there is one, or a fallback user-agent otherwise.
   $user_agent = $_SERVER["HTTP_USER_AGENT"];
   if (empty($user_agent)) {
@@ -191,6 +198,11 @@ function makeRequest($url) {
       "Origin"
     ]
   );
+
+  if(!$cookies){
+  array_splice($removedHeaders, 2, 0, 'Cookie'); //Remove cookie header if we aren't using cookies
+  array_splice($removedHeaders, 4, 0, 'Set-Cookie');
+  }
 
   $removedHeaders = array_map("strtolower", $removedHeaders);
 
@@ -244,6 +256,15 @@ function makeRequest($url) {
   curl_setopt($ch, CURLOPT_HEADER, true);
   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+  if ($cookies) {
+  $parseUrl = parse_url(trim($url));
+  $host = trim($parseUrl['host'] ? $parseUrl['host'] : array_shift(explode('/', $parseUrl['path'], 2))); // http://stackoverflow.com/a/1974047/278810
+  $cookieFile = sys_get_temp_dir() . "cookiefile_" . session_id() . "_" . $host;
+
+  curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile);
+  curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile);
+  }
 
   //Set the request URL.
   curl_setopt($ch, CURLOPT_URL, $url);
